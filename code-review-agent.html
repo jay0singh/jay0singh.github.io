@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Code Review Agent — Case Study · Jay Prakash</title>
+  <meta name="description" content="A deployed GitHub App that reviews pull requests with an LLM and posts inline, severity-tagged feedback — gated by a human-in-the-loop Telegram approval step." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' font-family='monospace' font-weight='bold' fill='%2364ffda'>JP</text></svg>" />
+</head>
+<body>
+  <div class="scroll-progress" id="scrollProgress"></div>
+
+  <header class="cs-nav">
+    <a href="index.html#projects" class="cs-back">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Jay Prakash
+    </a>
+    <button class="nav__toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    </button>
+  </header>
+
+  <main class="cs-wrap">
+    <section class="cs-hero">
+      <p class="cs-eyebrow">Case study · AI Engineering</p>
+      <h1 class="cs-title">AI Code Review Agent</h1>
+      <p class="cs-tagline">
+        A deployed GitHub App that reviews pull requests with an LLM and posts inline,
+        severity-tagged feedback — gated by a <em>human-in-the-loop</em> Telegram approval step,
+        so a maintainer always controls what the bot says publicly.
+      </p>
+      <div class="cs-stack">
+        <span>Python</span><span>FastAPI</span><span>async httpx</span><span>GitHub Apps (JWT)</span>
+        <span>Groq · Llama 3.3 70B</span><span>Telegram Bot API</span><span>SQLite</span>
+        <span>Docker</span><span>Render</span><span>pytest</span>
+      </div>
+      <div class="cs-actions">
+        <a href="https://github.com/jay0singh/order-fulfillment-demo/pull/2" class="btn btn--primary" target="_blank" rel="noopener">See it in action ↗</a>
+        <a href="https://github.com/jay0singh/code-review-agent" class="btn btn--ghost" target="_blank" rel="noopener">Source ↗</a>
+      </div>
+    </section>
+
+    <section class="cs-section reveal">
+      <h2><span class="cs-ic">◆</span> What it does</h2>
+      <p>
+        AI Code Review Agent is a production-deployed GitHub App that brings automated,
+        LLM-powered code review into a normal GitHub workflow. On every pull request or push, it
+        pulls the diff via the GitHub API, sends it to a large language model for review, and
+        posts the findings back as line-anchored inline comments tagged by severity. It
+        deliberately stays silent when there's nothing significant to flag, so it adds signal
+        rather than noise.
+      </p>
+      <p>
+        Its distinguishing feature is a <strong>human-in-the-loop approval gate</strong>: instead
+        of auto-posting, each review is routed to a Telegram bot with Approve / Reject buttons,
+        and posts to GitHub only after a maintainer approves — keeping a human in control of what
+        the bot says publicly.
+      </p>
+    </section>
+
+    <section class="cs-section reveal">
+      <h2><span class="cs-ic">◆</span> Key features</h2>
+      <ul class="cs-list">
+        <li><strong>Inline PR &amp; commit-level reviews</strong>, severity-tagged (🔴 blocker · 🟡 warning · 🔵 nit); quiet below a configurable threshold.</li>
+        <li><strong>Human-in-the-loop Telegram approval</strong> — reviews are held, approved/rejected via inline buttons, with failure alerts and gate modes (gate everything, or only reviews containing a blocker).</li>
+        <li><strong>GitHub App identity</strong> with self-rotating installation tokens, so comments post under a dedicated bot account.</li>
+        <li><strong>Reviews only the newly pushed changes</strong> on PR updates (compare-diff), plus a <code>/rereview</code> command to force a fresh pass.</li>
+        <li><strong>Deduplication</strong> so redelivered webhooks never double-post.</li>
+      </ul>
+    </section>
+
+    <section class="cs-section reveal">
+      <h2><span class="cs-ic">◆</span> Engineering highlights</h2>
+      <ul class="cs-list">
+        <li><strong>Stateful approval over a stateless webhook</strong> — approval turns synchronous posting into deferred posting: the fully-rendered GitHub payload is persisted under a single-use token and replayed on approval. The Telegram callback is fast-acknowledged and processed in the background so a slow GitHub round-trip can't cause duplicate deliveries.</li>
+        <li><strong>Security-conscious throughout</strong> — HMAC verification of GitHub webhooks, a shared-secret + chat-id check on the Telegram callback, HTML-escaping of user-controlled content, a fail-closed approval gate, and secrets kept out of the Docker image.</li>
+        <li><strong>Prompt engineering</strong> — the review prompt is tuned to produce specific, senior-level findings (name the exact symbol, state the concrete failure and its trigger, give a fix) rather than generic advice, with calibrated severity levels.</li>
+        <li><strong>Resilient LLM integration</strong> — diff-size budgeting with automatic shrink on oversized requests, and back-off/retry on rate limits.</li>
+        <li><strong>Production ops</strong> — auto-deploys from <code>main</code> on Render, kept warm by a health-check monitor, with a SQLite store that survives restarts for both dedupe and pending approvals.</li>
+        <li><strong>~140 automated tests</strong> covering webhook dispatch, review generation, and the full approval flow.</li>
+      </ul>
+    </section>
+
+    <section class="cs-section reveal">
+      <h2><span class="cs-ic">◆</span> What I'd highlight in an interview</h2>
+      <div class="cs-cards">
+        <div class="cs-callout">Turning a <strong>stateless webhook into a stateful approval flow</strong> with single-use replay tokens and background-processed callbacks.</div>
+        <div class="cs-callout">A <strong>fail-closed security posture</strong>: HMAC + shared-secret checks, HTML-escaping, and secrets kept out of the image.</div>
+        <div class="cs-callout"><strong>Prompt calibration</strong> for specific, senior-level findings — and knowing when to stay quiet to preserve signal.</div>
+      </div>
+    </section>
+
+    <nav class="cs-more">
+      <a href="url-shortener.html">
+        <span>Next case study →</span>
+        <strong>URL Shortener Service</strong>
+      </a>
+      <a href="index.html#projects">
+        <span>← Back to</span>
+        <strong>All projects</strong>
+      </a>
+    </nav>
+  </main>
+
+  <footer class="footer">
+    <p class="footer__note">Designed &amp; built by Jay Prakash</p>
+    <p class="footer__sub">Backend Engineer · Open to relocation</p>
+  </footer>
+
+  <script src="case-study.js"></script>
+</body>
+</html>

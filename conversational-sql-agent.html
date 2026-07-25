@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conversational SQL Agent — Case Study · Jay Prakash</title>
+  <meta name="description" content="A natural-language-to-SQL agent for Formula 1: ask in plain English, get the generated SQL, the result table, and a conversational answer — with defense-in-depth for executing LLM-generated SQL." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' font-family='monospace' font-weight='bold' fill='%2364ffda'>JP</text></svg>" />
+</head>
+<body>
+  <div class="scroll-progress" id="scrollProgress"></div>
+
+  <header class="cs-nav">
+    <a href="index.html#projects" class="cs-back">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Jay Prakash
+    </a>
+    <button class="nav__toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    </button>
+  </header>
+
+  <main class="cs-wrap">
+    <section class="cs-hero">
+      <p class="cs-eyebrow">Case study · AI Engineering &amp; Data</p>
+      <h1 class="cs-title">Conversational SQL Agent — Formula 1</h1>
+      <p class="cs-tagline">
+        Ask questions about F1 in plain English and get back the generated SQL, the result
+        table, and a natural-language answer — backed by a <em>self-updating</em> pipeline
+        covering every race since 2010.
+      </p>
+      <div class="cs-stack">
+        <span>Python</span><span>FastAPI</span><span>LangGraph</span><span>PostgreSQL / Supabase</span>
+        <span>Groq · Llama 3.3 70B</span><span>React</span><span>TypeScript</span><span>Vite</span>
+        <span>sqlglot</span><span>Docker</span><span>GitHub Actions</span><span>pytest / Vitest</span><span>Render</span>
+      </div>
+      <div class="cs-actions">
+        <a href="https://conversational-sql-agent.onrender.com/" class="btn btn--primary" target="_blank" rel="noopener">Live demo ↗</a>
+        <a href="https://github.com/jay0singh/conversational-sql-agent" class="btn btn--ghost" target="_blank" rel="noopener">Source ↗</a>
+      </div>
+    </section>
+
+    <section class="cs-section reveal">
+      <h2><span class="cs-ic">◆</span> What it does</h2>
+      <p>
+        A natural-language interface to a Formula 1 database. Users ask questions like
+        "Who won the 2021 championship?" or "Which team had the fastest average pit stop in
+        2023?" and the app generates the SQL, runs it against a live database, and returns a
+        conversational answer — with the query and result table shown for transparency.
+      </p>
+      <p>
+        It handles follow-ups ("what about 2022?"), answers subjective questions honestly
+        ("greatness is subjective, but by wins…"), and responds to greetings without
+        fabricating data. It's a full-stack, end-to-end analytics system built with production
+        concerns first: idempotent and resumable data loading, defense-in-depth against
+        LLM-generated SQL, a streaming chat UX, a 53-test suite, CI, and a live deployment.
+      </p>
+    </section>
+
+    <section class="cs-section reveal">
+      <h2><span class="cs-ic">◆</span> Data engineering</h2>
+      <p>
+        A Python ETL pipeline pulls from the rate-limited Jolpica F1 API into a
+        <strong>12-table normalized Postgres schema</strong> (Supabase). It uses a sliding-window
+        rate limiter, two-track retry/backoff, pure-function transforms, and idempotent
+        FK-ordered upserts. A checkpointed backfill loads all seasons resumably — roughly
+        <strong>390K lap-timing rows</strong> plus full results, qualifying, and standings history
+        — and a weekly GitHub Actions cron keeps it current, gated by a post-load data-quality
+        check.
+      </p>
+    </section>
+
+    <section class="cs-section reveal">
+      <h2><span class="cs-ic">◆</span> The AI agent</h2>
+      <p>A <strong>LangGraph state machine</strong> turns each message into a safe, executed query:</p>
+      <ol class="cs-steps">
+        <li><h3>Route</h3><p>Classifies the message (chit-chat vs. data question) and resolves conversational follow-ups from thread memory.</p></li>
+        <li><h3>Generate</h3><p>Injects the live database schema and generates SQL with an LLM (Groq / Llama 3.3 70B).</p></li>
+        <li><h3>Validate</h3><p>AST-based checks confirm the query is read-only and schema-correct before it touches the database.</p></li>
+        <li><h3>Execute &amp; self-correct</h3><p>Runs the query; on error, real database messages are fed back to the model to self-correct — up to 3 attempts.</p></li>
+        <li><h3>Answer</h3><p>Formats the result into a plain-English answer, streamed alongside the SQL and result table.</p></li>
+      </ol>
+    </section>
+
+    <section class="cs-section reveal">
+      <h2><span class="cs-ic">◆</span> Security — the standout</h2>
+      <p>
+        Because the app executes LLM-generated SQL, it's defended in depth across three
+        independent layers — and the guarantees are proven, not assumed:
+      </p>
+      <ul class="cs-list">
+        <li><strong>Dedicated read-only database role</strong> — writes are impossible at the database level, not just discouraged in prompts.</li>
+        <li><strong>AST-based query validation</strong> — SELECT-only, schema-checked, with an injected <code>LIMIT</code>, parsed via sqlglot.</li>
+        <li><strong>8-second statement timeout</strong> — a runaway query can't hang the service.</li>
+        <li><strong>Adversarial safety tests</strong> — hostile prompts ("delete all drivers") are driven through the real agent, asserting row counts never change.</li>
+      </ul>
+    </section>
+
+    <section class="cs-section reveal">
+      <h2><span class="cs-ic">◆</span> Interface &amp; delivery</h2>
+      <p>
+        A FastAPI backend streams progress over Server-Sent Events; a React + TypeScript (Vite)
+        chat UI shows live status, collapsible SQL, and result tables. It's packaged as a single
+        Docker container — FastAPI serves both the API and the built frontend — and deployed live
+        on Render. A <strong>53-test suite across 6 layers</strong> (SQL validation, transforms,
+        API, safety e2e, NL→SQL correctness eval, frontend) runs in CI.
+      </p>
+    </section>
+
+    <section class="cs-section reveal">
+      <h2><span class="cs-ic">◆</span> What I'd highlight in an interview</h2>
+      <div class="cs-cards">
+        <div class="cs-callout"><strong>End-to-end ownership</strong> — data pipeline → database → AI agent → API → UI → tests → CI → deploy.</div>
+        <div class="cs-callout">Safely executing <strong>untrusted LLM SQL</strong> via three independent layers, proven by automated safety tests.</div>
+        <div class="cs-callout"><strong>Production ETL patterns</strong> — idempotent upserts, resumable checkpointing, rate-limit-aware fetching, orchestrated by scheduled CI.</div>
+      </div>
+    </section>
+
+    <nav class="cs-more">
+      <a href="code-review-agent.html">
+        <span>Next case study →</span>
+        <strong>AI Code Review Agent</strong>
+      </a>
+      <a href="index.html#projects">
+        <span>← Back to</span>
+        <strong>All projects</strong>
+      </a>
+    </nav>
+  </main>
+
+  <footer class="footer">
+    <p class="footer__note">Designed &amp; built by Jay Prakash</p>
+    <p class="footer__sub">Backend Engineer · Open to relocation</p>
+  </footer>
+
+  <script src="case-study.js"></script>
+</body>
+</html>

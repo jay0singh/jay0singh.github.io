@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agentic RAG System — Case Study · Jay Prakash</title>
+  <meta name="description" content="A production-deployed, multi-tool RAG system built with LangGraph: hybrid retrieval, LLM-as-judge grading, human-in-the-loop learning, and full Langfuse observability." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' font-family='monospace' font-weight='bold' fill='%2364ffda'>JP</text></svg>" />
+</head>
+<body>
+  <div class="scroll-progress" id="scrollProgress"></div>
+
+  <header class="cs-nav">
+    <a href="index.html#projects" class="cs-back">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Jay Prakash
+    </a>
+    <button class="nav__toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    </button>
+  </header>
+
+  <main class="cs-wrap">
+    <section class="cs-hero">
+      <p class="cs-eyebrow">Case study · AI Engineering</p>
+      <h1 class="cs-title">Agentic RAG System</h1>
+      <p class="cs-tagline">
+        A production-deployed, multi-tool retrieval-augmented generation system that decides
+        <em>how</em> to answer each question — searching documents, the live web, or a GitHub
+        repo — and grades itself before answering.
+      </p>
+      <div class="cs-stack">
+        <span>Python</span><span>LangGraph</span><span>LangChain</span><span>FastAPI</span><span>Streamlit</span>
+        <span>PostgreSQL + pgvector</span><span>Groq</span><span>Google Gemini</span><span>Langfuse</span>
+        <span>Docker</span><span>GitHub Actions</span><span>Hugging Face Spaces</span><span>Neon</span>
+      </div>
+      <div class="cs-actions">
+        <a href="https://huggingface.co/spaces/jay0singha/agentic-ai" class="btn btn--primary" target="_blank" rel="noopener">Live demo ↗</a>
+        <a href="https://github.com/jay0singh/agentic-ai" class="btn btn--ghost" target="_blank" rel="noopener">Source ↗</a>
+      </div>
+    </section>
+
+    <section class="cs-section reveal">
+      <h2><span class="cs-ic">◆</span> What it does</h2>
+      <p>
+        An agentic chatbot that answers questions by autonomously deciding how to answer them —
+        searching an ingested document library, searching the live web, or reading a GitHub
+        repository — rather than always defaulting to one retrieval path. Every answer is
+        evaluated for factual grounding before it reaches the user, and the system knows when to
+        ask a human for help instead of guessing.
+      </p>
+    </section>
+
+    <section class="cs-section reveal">
+      <h2><span class="cs-ic">◆</span> Architecture</h2>
+      <p>A <strong>LangGraph state machine</strong> drives the pipeline:</p>
+      <ol class="cs-steps">
+        <li>
+          <h3>Router</h3>
+          <p>Classifies each query — with conversation-aware follow-up resolution, so "does it cost anything?" correctly infers context from the prior turn — and plans a sequence of tool calls.</p>
+        </li>
+        <li>
+          <h3>Retrieval</h3>
+          <p>Hybrid search combines pgvector cosine similarity with PostgreSQL full-text search, merged via reciprocal rank fusion, so both semantic and exact-keyword queries (section numbers, product codes) retrieve reliably. A calibrated relevance threshold — tuned empirically against real embedding distances — filters weak matches before they reach the prompt.</p>
+        </li>
+        <li>
+          <h3>Generation</h3>
+          <p>A Groq-hosted model synthesizes the answer from retrieved context, with citations attached per source document.</p>
+        </li>
+        <li>
+          <h3>Judgment</h3>
+          <p>A second, larger Groq model acts as an independent judge, checking the answer against retrieved context for hallucination or contradiction. Ungrounded answers trigger an automatic query rewrite and retry — bounded to prevent infinite loops, a real failure mode I found and fixed via trace analysis.</p>
+        </li>
+        <li>
+          <h3>Human-in-the-loop</h3>
+          <p>After repeated failed retries, the question is persisted to a review queue. A human answers it directly in the UI, and that answer is embedded back into the vector store — so the knowledge base grows from the system's own failures.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="cs-section reveal">
+      <h2><span class="cs-ic">◆</span> Engineering highlights</h2>
+      <ul class="cs-list">
+        <li><strong>Full observability:</strong> every request is traced end-to-end in Langfuse — router decisions, retrieved chunks, judge reasoning, retry chains, token usage — tagged by environment. Diagnosed and fixed real production bugs (a hallucinated brand name, an infinite retry loop, a token-limit overflow) directly from trace data rather than guesswork.</li>
+        <li><strong>Streaming UX:</strong> answers stream token-by-token over Server-Sent Events, with LangGraph execution running in a background thread so the Langfuse trace context survives across the generator boundary.</li>
+        <li><strong>Persistent, multi-session conversations:</strong> full chat history lives in Postgres, addressable by session ID in the URL — conversations survive refreshes, restarts, and redeployments, with a sidebar to switch between them.</li>
+        <li><strong>User feedback loop:</strong> thumbs up/down on every answer is recorded as a scored annotation on that answer's trace, forming the basis for quality evaluation against a golden-question regression dataset.</li>
+        <li><strong>Test-gated CI/CD:</strong> a 113-test suite (all LLM calls mocked, zero API cost) gates every push via GitHub Actions; a separate workflow auto-deploys green builds to a live Hugging Face Space.</li>
+        <li><strong>Zero-cost infrastructure:</strong> every dependency — inference, embeddings, database, web search, tracing, hosting — runs on a free tier with no payment method attached, deliberately designed so failure modes are rate limits, never bills.</li>
+      </ul>
+    </section>
+
+    <section class="cs-section reveal">
+      <h2><span class="cs-ic">◆</span> What I'd highlight in an interview</h2>
+      <div class="cs-cards">
+        <div class="cs-callout">Diagnosing and fixing a production <strong>infinite-loop bug</strong> using distributed tracing rather than log-reading.</div>
+        <div class="cs-callout">Calibrating a retrieval <strong>relevance threshold</strong> from measured cosine-distance distributions instead of guessing a constant.</div>
+        <div class="cs-callout"><strong>Graceful degradation</strong> throughout: every external dependency has a defined fallback, so a single API hiccup never breaks the chat.</div>
+      </div>
+    </section>
+
+    <nav class="cs-more">
+      <a href="conversational-sql-agent.html">
+        <span>Next case study →</span>
+        <strong>Conversational SQL Agent</strong>
+      </a>
+      <a href="index.html#projects">
+        <span>← Back to</span>
+        <strong>All projects</strong>
+      </a>
+    </nav>
+  </main>
+
+  <footer class="footer">
+    <p class="footer__note">Designed &amp; built by Jay Prakash</p>
+    <p class="footer__sub">Backend Engineer · Open to relocation</p>
+  </footer>
+
+  <script src="case-study.js"></script>
+</body>
+</html>
