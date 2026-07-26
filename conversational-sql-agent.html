@@ -56,6 +56,11 @@
       </div>
     </section>
 
+    <figure class="cs-figure reveal">
+      <img src="assets/sql-agent-chat.png" alt="The SQL Agent answering 'Who is the GOAT of F1?' — showing the natural-language answer, the generated SQL, and the result table." loading="lazy" />
+      <figcaption>Plain-English question → generated SQL → result table → a natural-language answer (with honest handling of subjective questions).</figcaption>
+    </figure>
+
     <section class="cs-section reveal">
       <h2><span class="cs-ic">◆</span> What it does</h2>
       <p>
@@ -110,6 +115,10 @@
         <li><strong>8-second statement timeout</strong> — a runaway query can't hang the service.</li>
         <li><strong>Adversarial safety tests</strong> — hostile prompts ("delete all drivers") are driven through the real agent, asserting row counts never change.</li>
       </ul>
+      <figure class="cs-figure reveal" style="margin-top: 1.6rem;">
+        <img src="assets/sql-agent-safety.png" alt="The agent refusing destructive prompts: 'Delete everything' and 'Delete all the tables' return an out-of-scope note with no data changed." loading="lazy" />
+        <figcaption>Destructive prompts like "delete everything" are safely refused — the read-only role and validation mean no data can change.</figcaption>
+      </figure>
     </section>
 
     <section class="cs-section reveal">

@@ -37,3 +37,22 @@ const io = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+/* Lightbox for case-study screenshots (activates only if figures exist) */
+const figureImgs = document.querySelectorAll('.cs-figure img');
+if (figureImgs.length) {
+  const box = document.createElement('div');
+  box.className = 'cs-lightbox';
+  box.innerHTML = '<button class="cs-lightbox__close" aria-label="Close">&times;</button><img alt="">';
+  document.body.appendChild(box);
+  const boxImg = box.querySelector('img');
+  const close = () => { box.classList.remove('open'); document.body.style.overflow = ''; };
+  figureImgs.forEach((img) => img.addEventListener('click', () => {
+    boxImg.src = img.currentSrc || img.src;
+    boxImg.alt = img.alt;
+    box.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }));
+  box.addEventListener('click', (e) => { if (e.target !== boxImg) close(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+}
